@@ -4,13 +4,15 @@ import { readFile } from 'node:fs/promises';
 
 const {
   REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET, REDDIT_USERNAME, REDDIT_PASSWORD,
-  SUBREDDIT = 'OttawaSenators', FLAIR_ID, ONLY_AFTER_GAMES = 'true',
+  SUBREDDIT = 'OttawaSenators', FLAIR_ID, POST_DAY = 'Mon',
 } = process.env;
 const UA = `season-at-a-glance/1.0 by u/${REDDIT_USERNAME}`;
 
 const meta = JSON.parse(await readFile('dist/meta.json', 'utf8'));
-if (ONLY_AFTER_GAMES === 'true' && !meta.playedRecently) {
-  console.log('No game in the last 30 hours, skipping post.');
+// Weekly post: only on POST_DAY (Toronto time). Set POST_DAY=any to post every run.
+const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Toronto', weekday: 'short' }).format(new Date());
+if (POST_DAY !== 'any' && !today.toLowerCase().startsWith(POST_DAY.toLowerCase().slice(0, 3))) {
+  console.log(`Today is ${today}; weekly post goes out on ${POST_DAY}. Skipping.`);
   process.exit(0);
 }
 

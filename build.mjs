@@ -58,18 +58,20 @@ export async function loadData() {
     const standings = await read('standings.json');
     const schedule = await read('schedule.json');
     const history = await read('history.json').catch(() => ({}));
-    return { schedule, standings, history };
+    const leaders = await read('leaders.json').catch(() => null);
+    return { schedule, standings, history, leaders };
   }
   const [schedule, standings] = await Promise.all([
     getJSON(`${API}/club-schedule-season/${TEAM}/now`),
     getJSON(`${API}/standings/now`),
   ]);
-  return { schedule, standings, history: await standingsHistory(schedule) };
+  const leaders = await getJSON(`${API}/club-stats/${TEAM}/now`).catch(() => null);
+  return { schedule, standings, history: await standingsHistory(schedule), leaders };
 }
 
 // Points above (+) or below (−) the playoff line, NHL format: top 3 in each division + 2 wild cards.
 // In a playoff spot: compared with the first team out. Outside: compared with the last wild card.
-export function playoffGap(rows, team) {
+function splitConference(rows, team) {
   const me = rows.find((r) => r.teamAbbrev.default === team);
   if (!me) return null;
   const conf = rows.filter((r) => r.conferenceName === me.conferenceName);
@@ -85,9 +87,69 @@ export function playoffGap(rows, team) {
   const race = conf
     .filter((r) => !divisionTop.has(r))
     .sort((a, b) => (a.wildcardSequence || 99) - (b.wildcardSequence || 99) || byPoints(a, b));
+  return { me, divisionTop, race };
+}
+
+export function playoffGap(rows, team) {
+  const split = splitConference(rows, team);
+  if (!split) return null;
+  const { me, divisionTop, race } = split;
   const inPlayoffs = divisionTop.has(me) || race.indexOf(me) < 2;
   const rival = inPlayoffs ? race[2] : race[1];
   return rival ? me.points - rival.points : null;
+}
+
+// The two wild cards plus the chasers, for the table. Our team is appended if it sits further back.
+export function wildCardRace(rows, team, shown = 6) {
+  const split = splitConference(rows, team);
+  if (!split) return null;
+  const { me, divisionTop, race } = split;
+  const row = (r, i) => ({
+    abbr: r.teamAbbrev.default,
+    logo: logoUrl(r.teamAbbrev.default),
+    gp: r.gamesPlayed,
+    pts: r.points,
+    tag: i < 2 ? `WC${i + 1}` : '',
+    me: r === me,
+    cut: i === 1,
+  });
+  const idx = race.indexOf(me);
+  return {
+    rows: race.slice(0, shown).map(row),
+    extra: idx >= shown ? row(me, idx) : null,
+    divisionSpot: divisionTop.has(me) ? { rank: me.divisionSequence, division: me.divisionName } : null,
+  };
+}
+
+// Points leader, goals leader (assists if it's the same player) and the No. 1 goalie.
+export function teamLeaders(stats) {
+  if (!stats) return [];
+  const skaters = stats.skaters ?? [];
+  const goalies = stats.goalies ?? [];
+  const top = (list, key) => [...list].sort((a, b) => (b[key] ?? 0) - (a[key] ?? 0))[0];
+  const person = (p) => ({
+    name: `${(p.firstName?.default ?? '').charAt(0)}. ${p.lastName?.default ?? ''}`,
+    headshot: p.headshot,
+    initials: `${(p.firstName?.default ?? '').charAt(0)}${(p.lastName?.default ?? '').charAt(0)}`,
+  });
+  const out = [];
+  const pts = top(skaters, 'points');
+  if (pts) out.push({ ...person(pts), label: 'Points', value: pts.points, detail: `${pts.goals} G, ${pts.assists} A` });
+  let second = top(skaters, 'goals');
+  if (second && pts && second.playerId === pts.playerId) {
+    second = top(skaters.filter((p) => p.playerId !== pts.playerId), 'goals');
+  }
+  if (second) out.push({ ...person(second), label: 'Goals', value: second.goals, detail: `${second.points} points` });
+  const g = top(goalies, 'gamesPlayed');
+  if (g) {
+    out.push({
+      ...person(g),
+      label: 'Save %',
+      value: (g.savePercentage ?? 0).toFixed(3).replace(/^0/, ''),
+      detail: `${g.wins ?? 0} wins`,
+    });
+  }
+  return out;
 }
 
 function normaliseGame(g) {
@@ -117,7 +179,7 @@ function tally(games) {
   return `${r.W}-${r.L}-${r.OTL}`;
 }
 
-export function buildModel({ schedule, standings, history = {} }, now = new Date()) {
+export function buildModel({ schedule, standings, history = {}, leaders = null }, now = new Date()) {
   const games = schedule.games
     .filter((g) => g.gameType === 2) // regular season only
     .map((g) => ({ ...normaliseGame(g), gameDate: g.gameDate }))
@@ -159,6 +221,8 @@ export function buildModel({ schedule, standings, history = {} }, now = new Date
     points: me?.points ?? pts,
     gapByGame,
     playoffGap: playoffGap(rows, TEAM),
+    wildCard: wildCardRace(rows, TEAM),
+    leaders: teamLeaders(leaders),
     divisionName: me?.divisionName,
     divisionRank: me?.divisionSequence,
     streak: played.length ? { won: played.at(-1).result === 'W', length: streak } : null,
@@ -334,14 +398,15 @@ async function fontFaceCSS() {
 // Swap every NHL logo URL for an embedded copy, so the page works offline and
 // the in-browser "save image" can draw them (remote images would block it).
 async function inlineLogos(html) {
-  const urls = [...new Set(html.match(/https:\/\/assets\.nhle\.com\/logos\/[^"')\s]+/g) ?? [])];
+  const urls = [...new Set(html.match(/https:\/\/assets\.nhle\.com\/[^"')\s]+\.(?:svg|png|jpg)/g) ?? [])];
   const swaps = await Promise.all(
     urls.map(async (url) => {
       try {
         const res = await fetch(url);
         if (!res.ok) return null;
         const b64 = Buffer.from(await res.arrayBuffer()).toString('base64');
-        return [url, `data:image/svg+xml;base64,${b64}`];
+        const type = url.endsWith('.svg') ? 'image/svg+xml' : url.endsWith('.png') ? 'image/png' : 'image/jpeg';
+        return [url, `data:${type};base64,${b64}`];
       } catch {
         return null; // keep the remote URL if a logo can't be fetched
       }

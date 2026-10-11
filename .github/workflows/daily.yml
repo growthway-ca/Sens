@@ -62,4 +62,4 @@ jobs:
           REDDIT_PASSWORD: ${{ secrets.REDDIT_PASSWORD }}
           SUBREDDIT: ${{ vars.SUBREDDIT || 'OttawaSenators' }}
           FLAIR_ID: ${{ vars.FLAIR_ID }}
-          ONLY_AFTER_GAMES: ${{ vars.ONLY_AFTER_GAMES || 'true' }}
+          POST_DAY: ${{ vars.POST_DAY || 'Mon' }}

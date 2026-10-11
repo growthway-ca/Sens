@@ -127,6 +127,35 @@ function results(last) {
     .join('');
 }
 
+function wildCardTable(wc) {
+  if (!wc) return '';
+  const row = (r) => `<div class="wc-row${r.me ? ' me' : ''}${r.cut ? ' cut' : ''}">
+      <span class="tag">${r.tag}</span>${img(r.logo, r.abbr, 'wlogo')}<span class="ab">${r.abbr}</span><span class="n">${r.gp}</span><span class="n pts">${r.pts}</span></div>`;
+  const note = wc.divisionSpot
+    ? `<p class="wc-note">Ottawa holds a division spot, ${ordinal(wc.divisionSpot.rank)} in the ${wc.divisionSpot.division}</p>`
+    : '';
+  return `<section class="wc"><h3>Wild card race</h3>
+    <div class="wc-row wc-head"><span></span><span></span><span></span><span class="n">GP</span><span class="n">PTS</span></div>
+    ${wc.rows.map(row).join('')}
+    ${wc.extra ? `<div class="wc-gap">…</div>${row(wc.extra)}` : ''}
+    ${note}
+  </section>`;
+}
+
+function leadersStrip(leaders) {
+  if (!leaders.length) return '';
+  return `<section class="leaders"><h3>Team leaders</h3>
+    ${leaders
+      .map(
+        (p) => `<div class="leader">
+        ${p.headshot ? `<img class="shot" src="${p.headshot}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('b'),{className:'shot ph',textContent:'${p.initials}'}))">` : `<b class="shot ph">${p.initials}</b>`}
+        <span class="who"><span class="nm">${p.name}</span><span class="lb">${p.label}, ${p.detail}</span></span>
+        <span class="val">${p.value}</span></div>`
+      )
+      .join('')}
+  </section>`;
+}
+
 export function renderRibbon(m, fontFaces = '') {
   const played = m.games.filter((g) => g.done).length;
   const streak = m.streak?.length > 1 ? `, ${m.streak.won ? 'won' : 'lost'} ${m.streak.length} straight` : '';
@@ -179,37 +208,57 @@ svg rect.w { fill: var(--w); } svg rect.l { fill: var(--l); } svg rect.otl { fil
 .trace { fill: none; stroke: var(--white); stroke-width: 2.6; stroke-linejoin: round; }
 .now { fill: var(--white); }
 
-/* bottom: head-to-head left, tickets + results right */
-.lower { position: absolute; left: 48px; top: 568px; width: 984px; display: grid; grid-template-columns: 624px 336px; column-gap: 24px; }
-.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 24px; align-content: start; }
-.div h3 { display: flex; justify-content: space-between; align-items: baseline; font: 700 27px var(--cond); padding-bottom: 6px; margin-bottom: 6px; border-bottom: 2px solid var(--line); }
-.drec { font: 400 22px var(--jersey); color: var(--gold); }
-.h2h { display: flex; align-items: center; height: 37px; }
-.mini { width: 50px; height: 36px; object-fit: contain; margin-right: 14px; flex: none; }
-.ph { display: grid; place-items: center; font: 600 14px var(--cond); color: #ccc; border: 1.5px solid #444; border-radius: 50%; }
-.mini.ph { width: 36px; height: 36px; margin-right: 28px; }
-.pips { display: flex; gap: 9px; }
-.pip { width: 30px; height: 30px; }
+/* bottom: compact head-to-head | wild card + leaders | next 5 + last 5 */
+.lower { position: absolute; left: 48px; top: 568px; width: 984px; display: grid; grid-template-columns: 400px 268px 268px; column-gap: 24px; }
+.lower h3 { font: 700 25px var(--cond); padding-bottom: 6px; margin-bottom: 8px; border-bottom: 2px solid var(--line); }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 20px; align-content: start; }
+.div h3 { display: flex; justify-content: space-between; align-items: baseline; font-size: 21px; }
+.drec { font: 400 17px var(--jersey); color: var(--gold); }
+.h2h { display: flex; align-items: center; height: 32px; }
+.mini { width: 34px; height: 26px; object-fit: contain; margin-right: 10px; flex: none; }
+.ph { display: grid; place-items: center; font: 600 12px var(--cond); color: #ccc; border: 1.5px solid #444; border-radius: 50%; }
+.mini.ph { width: 26px; height: 26px; margin-right: 18px; }
+.pips { display: flex; gap: 5px; }
+.pip { width: 23px; height: 23px; }
 .pip.w { fill: var(--w); } .pip.l { fill: var(--l); } .pip.otl { fill: var(--otl); } .pip.tbd { fill: var(--tbd); }
 
-.side h3 { font: 700 27px var(--cond); padding-bottom: 6px; margin-bottom: 10px; border-bottom: 2px solid var(--line); }
-.ticket { display: grid; grid-template-columns: 100px 1fr; height: 70px; margin-bottom: 9px; background: var(--coal); border-radius: 6px; overflow: hidden; }
-.stub { background: var(--red); display: grid; grid-template-columns: 26px 1fr; align-items: center; border-right: 2px dashed #000; }
-.wd { writing-mode: vertical-rl; transform: rotate(180deg); justify-self: center; font: 700 17px/1 var(--cond); letter-spacing: 1px; text-transform: uppercase; }
-.dn { justify-self: center; padding-right: 4px; font: 400 40px/1 var(--jersey); }
-.vs { display: flex; align-items: center; padding: 0 16px 0 12px; gap: 10px; }
-.where { width: 24px; font: 600 22px var(--cond); color: var(--mute); }
-.tlogo { width: 72px; height: 60px; object-fit: contain; }
-.tlogo.ph { width: 56px; height: 56px; }
-.t { margin-left: auto; font: 600 26px var(--cond); }
-.results { margin-top: 18px; }
-.res { display: flex; align-items: center; height: 50px; gap: 14px; }
-.rlogo { width: 64px; height: 48px; object-fit: contain; }
-.rlogo.ph { width: 46px; height: 46px; margin: 0 9px; }
-.wl { width: 38px; height: 34px; display: grid; place-items: center; font: 400 20px var(--jersey); border-radius: 4px; }
+.wc-row { display: grid; grid-template-columns: 40px 42px 1fr 40px 44px; align-items: center; height: 36px; padding: 0 6px; font: 600 21px var(--cond); }
+.wc-head { height: 22px; font: 600 15px var(--cond); color: var(--mute); }
+.tag { font: 600 15px var(--cond); color: var(--gold); }
+.wlogo { width: 34px; height: 28px; object-fit: contain; }
+.wlogo.ph { width: 28px; height: 28px; }
+.n { text-align: right; }
+.pts { font: 400 20px var(--jersey); }
+.wc-row.cut { border-bottom: 2px dashed var(--gold); }
+.wc-row.me { background: rgba(200,16,46,.35); border-radius: 4px; }
+.wc-gap { text-align: center; color: var(--mute); line-height: 1; padding: 2px 0; }
+.wc-note { font: 500 17px/1.25 var(--cond); color: var(--mute); margin-top: 10px; }
+.leaders { margin-top: 22px; }
+.leader { display: flex; align-items: center; gap: 12px; height: 70px; }
+.shot { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; background: #1d1d1d; border: 2px solid var(--red); flex: none; }
+.shot.ph { display: grid; place-items: center; font: 400 18px var(--jersey); color: var(--white); }
+.who { display: grid; min-width: 0; }
+.nm { font: 700 22px/1.1 var(--cond); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lb { font: 500 16px/1.2 var(--cond); color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.val { margin-left: auto; font: 400 28px var(--jersey); }
+
+.ticket { display: grid; grid-template-columns: 86px 1fr; height: 66px; margin-bottom: 8px; background: var(--coal); border-radius: 6px; overflow: hidden; }
+.stub { background: var(--red); display: grid; grid-template-columns: 24px 1fr; align-items: center; border-right: 2px dashed #000; }
+.wd { writing-mode: vertical-rl; transform: rotate(180deg); justify-self: center; font: 700 15px/1 var(--cond); letter-spacing: 1px; text-transform: uppercase; }
+.dn { justify-self: center; padding-right: 4px; font: 400 36px/1 var(--jersey); }
+.vs { display: flex; align-items: center; padding: 0 12px 0 10px; gap: 8px; }
+.where { width: 20px; font: 600 20px var(--cond); color: var(--mute); }
+.tlogo { width: 62px; height: 52px; object-fit: contain; }
+.tlogo.ph { width: 48px; height: 48px; }
+.t { margin-left: auto; font: 600 23px var(--cond); }
+.results { margin-top: 16px; }
+.res { display: flex; align-items: center; height: 46px; gap: 12px; }
+.rlogo { width: 56px; height: 44px; object-fit: contain; }
+.rlogo.ph { width: 42px; height: 42px; margin: 0 7px; }
+.wl { width: 36px; height: 32px; display: grid; place-items: center; font: 400 19px var(--jersey); border-radius: 4px; }
 .wl.w { background: var(--green); color: #000; } .wl.l { background: var(--red); } .wl.otl { background: var(--gold); color: #000; }
-.sc { font: 600 30px var(--cond); }
-.ot { font: 600 18px var(--cond); color: var(--gold); }
+.sc { font: 600 27px var(--cond); }
+.ot { font: 600 17px var(--cond); color: var(--gold); }
 .empty { font: 500 20px var(--cond); color: var(--mute); padding: 12px 0; }
 .legend { position: absolute; left: 48px; bottom: 18px; font: 500 17px var(--cond); color: var(--mute); display: flex; gap: 22px; align-items: center; }
 .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
@@ -235,6 +284,7 @@ svg rect.w { fill: var(--w); } svg rect.l { fill: var(--l); } svg rect.otl { fil
 
   <div class="lower">
     <div class="grid2">${m.divisions.map(division).join('')}</div>
+    <div class="mid">${wildCardTable(m.wildCard)}${leadersStrip(m.leaders)}</div>
     <div class="side">
       <h3>Next 5</h3>
       ${tickets(m.next)}

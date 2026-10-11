@@ -15,7 +15,7 @@ Open `dist/season-at-a-glance.png` (the image) or `dist/index.html` (the live pa
 ## Make it run every day on GitHub
 
 1. Create a new GitHub repo and upload this folder (keep the `.github` folder).
-2. The workflow runs daily at about 9am Eastern. To test right away, go to Actions, pick "Season at a glance" and click "Run workflow".
+2. The workflow runs daily at 6am Eastern. To test right away, go to Actions, pick "Season at a glance" and click "Run workflow".
 3. Each run saves the PNG under that run's Artifacts so you can download it and post it yourself.
 
 ## Netlify (live page)
@@ -28,7 +28,7 @@ Open `dist/season-at-a-glance.png` (the image) or `dist/index.html` (the live pa
 2. In the repo, go to Settings → Secrets and variables → Actions and add:
    - Secrets: `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`, `REDDIT_USERNAME`, `REDDIT_PASSWORD`
    - Variables: `AUTO_POST` = `true`
-   - Optional variables: `FLAIR_ID` (if the sub requires flair), `ONLY_AFTER_GAMES` = `false` to post every day instead of only the morning after a game
+   - Optional variables: `FLAIR_ID` (if the sub requires flair), `POST_DAY` (default `Mon`; the page and image still refresh every day)
 3. Check with the r/OttawaSenators mods before turning on automated posts.
 
 ## Designs
