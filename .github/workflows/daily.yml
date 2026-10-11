@@ -1,0 +1,44 @@
+name: Season at a glance
+
+on:
+  schedule:
+    - cron: "0 13 * * *" # 9am Eastern (8am in winter)
+  workflow_dispatch: # lets you run it by hand from the Actions tab
+
+permissions:
+  contents: write # lets the workflow save the daily image to the repo
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npx playwright install --with-deps chromium
+      - run: node build.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: season-at-a-glance
+          path: dist/
+      - name: Save today's image (this also makes Netlify refresh)
+        run: |
+          mkdir -p latest
+          cp dist/season-at-a-glance.png latest/
+          git config user.name "season-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add latest/season-at-a-glance.png
+          git diff --cached --quiet || (git commit -m "Daily image $(date +%F)" && git push)
+      - name: Post to Reddit
+        if: ${{ vars.AUTO_POST == 'true' }}
+        run: node post-to-reddit.mjs
+        env:
+          REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
+          REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
+          REDDIT_USERNAME: ${{ secrets.REDDIT_USERNAME }}
+          REDDIT_PASSWORD: ${{ secrets.REDDIT_PASSWORD }}
+          SUBREDDIT: ${{ vars.SUBREDDIT || 'OttawaSenators' }}
+          FLAIR_ID: ${{ vars.FLAIR_ID }}
+          ONLY_AFTER_GAMES: ${{ vars.ONLY_AFTER_GAMES || 'true' }}

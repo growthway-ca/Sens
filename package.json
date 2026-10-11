@@ -1,0 +1,17 @@
+{
+  "name": "sens-season-at-a-glance",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "post": "node post-to-reddit.mjs"
+  },
+  "dependencies": {
+    "playwright": "1.56.0",
+    "@fontsource/anton": "5.2.7",
+    "@fontsource/roboto": "5.2.10",
+    "@fontsource/graduate": "5.2.7",
+    "@fontsource/barlow-condensed": "5.2.8",
+    "html-to-image": "1.11.11"
+  }
+}
