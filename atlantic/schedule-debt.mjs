@@ -1,13 +1,17 @@
 // Schedule Debt: a transparent fatigue score for every game on a team's schedule.
 // Each game adds points for back-to-backs, compressed stretches, travel, time zones
 // and rest mismatches with the opponent. Sum it up and you get a team's "debt".
-import { ARENAS, NEUTRAL_VENUES } from './arenas.mjs';
+import { ARENAS as CURRENT, LEGACY_ARENAS, NEUTRAL_VENUES } from './arenas.mjs';
 
+const ARENAS = { ...CURRENT, ...LEGACY_ARENAS };
+
+// Weights set from the 2023-26 backtest (3,854 games): a back-to-back cost about 6 points of win chance
+// and is the anchor at 3; the others are scaled by their measured effect. Time zones showed no cost.
 export const WEIGHTS = {
   backToBack: 3, // second night of a back-to-back
-  threeInFour: 1, // third game in four nights (stacks with a back-to-back)
-  per1000km: 0.5, // travel from the previous game's city
-  perTimeZone: 0.5, // each time zone crossed since the previous game
+  threeInFour: 1.4, // third game in four nights (stacks with a back-to-back)
+  per1000km: 0.7, // travel from the previous game's city
+  perTimeZone: 0, // each time zone crossed since the previous game
   restMismatch: 1, // + when you're on a back-to-back and they're rested, − when it's the other way round
 };
 

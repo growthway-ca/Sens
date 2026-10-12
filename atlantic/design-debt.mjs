@@ -116,7 +116,7 @@ ${baseCSS(fontFaces)}
     <div class="cells">${sparkCells(rows)}</div>
   </section>
 
-  <p class="method">How it's scored: +${WEIGHTS.backToBack} second night of a back-to-back, +${WEIGHTS.threeInFour} third game in four nights, +${WEIGHTS.per1000km} per 1,000 km travelled, +${WEIGHTS.perTimeZone} per time zone crossed, ±${WEIGHTS.restMismatch} when one team is on a back-to-back and the other is rested.</p>
+  <p class="method">How it's scored: +${WEIGHTS.backToBack} second night of a back-to-back, +${WEIGHTS.threeInFour} third game in four nights, +${WEIGHTS.per1000km} per 1,000 km travelled, ${WEIGHTS.perTimeZone ? `+${WEIGHTS.perTimeZone} per time zone crossed, ` : ''}±${WEIGHTS.restMismatch} when one team is on a back-to-back and the other is rested. Weights tested on 3,854 games from 2023 to 2026.</p>
 </main>
 ${saveBlock(saveScript, `atlantic-schedule-debt-${now.toISOString().slice(0, 10)}.png`)}
 </body></html>`;

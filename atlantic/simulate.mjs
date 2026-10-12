@@ -7,7 +7,7 @@ export const SIM_SETTINGS = {
   horizonDays: 14, // only games in the next two weeks get leverage numbers
   overtimeRate: 0.23, // share of games that reach OT/shootout (assumption; tune on past seasons)
   homeEdge: 0.04, // added to the home team's win chance
-  regressGames: 20, // early season, ratings are pulled toward average as if each team had 20 extra .500 games
+  regressGames: 40, // ratings are pulled toward average as if each team had 40 extra .500 games (best in the 3-season backtest)
 };
 
 export function mulberry32(seed) {

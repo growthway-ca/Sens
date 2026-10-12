@@ -6,13 +6,13 @@
 // Run (needs internet): node atlantic/backtest.mjs     SEASONS=20232024,20242025,20252026
 import { mkdir, writeFile } from 'node:fs/promises';
 import { getJSON } from '../build.mjs';
-import { ARENAS, ATLANTIC } from './arenas.mjs';
+import { ARENAS, LEGACY_ARENAS, ATLANTIC } from './arenas.mjs';
 import { simulate, SIM_SETTINGS } from './simulate.mjs';
 import { teamGames, scoreTeam, WEIGHTS } from './schedule-debt.mjs';
 
 const API = 'https://api-web.nhle.com/v1';
 const SEASONS = (process.env.SEASONS ?? '20232024,20242025,20252026').split(',');
-const TEAMS = Object.keys(ARENAS);
+const TEAMS = [...Object.keys(ARENAS), ...Object.keys(LEGACY_ARENAS)];
 const FINAL = new Set(['OFF', 'FINAL']);
 const dayIndex = (iso) => Math.round(Date.parse(iso + 'T00:00:00Z') / 864e5);
 const log = (...a) => console.log(...a);
@@ -80,7 +80,7 @@ function qualifiers(rows) {
 
 // ---------- 1. playoff-odds calibration ----------
 const VARIANTS = [];
-for (const regressGames of [10, 20, 30, 40]) for (const homeEdge of [0.02, 0.04]) VARIANTS.push({ regressGames, homeEdge });
+for (const regressGames of [30, 40, 60, 80]) for (const homeEdge of [0.02, 0.04]) VARIANTS.push({ regressGames, homeEdge });
 
 async function calibrate(season, data) {
   const y = Number(season.slice(0, 4));
@@ -195,7 +195,7 @@ async function main() {
     y.push(...d.y);
     const made = [...qualifiers(data.finalStandings)].sort();
     checks.push({ season, games: d.y.length, playoffTeams: made });
-    if (made.length !== 16 || d.y.length < 1000) throw new Error(`Season ${season} looks incomplete: ${made.length} playoff teams, ${d.y.length} games`);
+    if (made.length !== 16 || d.y.length < 1200) throw new Error(`Season ${season} looks incomplete: ${made.length} playoff teams, ${d.y.length} games`);
   }
 
   // best settings by Brier score (lower is better)

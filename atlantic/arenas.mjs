@@ -35,6 +35,11 @@ export const ARENAS = {
   WSH: { name: 'Capital One Arena', lat: 38.8981, lon: -77.0209, tz: -5 },
 };
 
+// Teams that no longer exist, needed only when backtesting older seasons.
+export const LEGACY_ARENAS = {
+  ARI: { name: 'Mullett Arena', lat: 33.4243, lon: -111.9325, tz: -7 }, // Arizona Coyotes, through 2023-24
+};
+
 // Games played away from both teams' arenas (e.g. Global Series in Europe).
 // Key = venue name exactly as the NHL schedule lists it. Add entries as they're announced;
 // unknown neutral sites fall back to the home team's arena.
