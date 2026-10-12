@@ -15,7 +15,6 @@ const SEASONS = (process.env.SEASONS ?? '20232024,20242025,20252026').split(',')
 const TEAMS = Object.keys(ARENAS);
 const FINAL = new Set(['OFF', 'FINAL']);
 const dayIndex = (iso) => Math.round(Date.parse(iso + 'T00:00:00Z') / 864e5);
-const nextDay = (iso) => new Date(Date.parse(iso + 'T12:00:00Z') + 864e5).toISOString().slice(0, 10);
 const log = (...a) => console.log(...a);
 
 async function seasonData(season) {
@@ -31,9 +30,34 @@ async function seasonData(season) {
   const games = new Map();
   for (const s of Object.values(schedules)) for (const g of s?.games ?? []) if (g.gameType === 2) games.set(g.id, g);
   const all = [...games.values()];
-  const lastDate = all.map((g) => g.gameDate).sort().at(-1);
-  const finalStandings = (await getJSON(`${API}/standings/${nextDay(lastDate)}`)).standings;
-  return { schedules, all, finalStandings };
+  // Final standings are rebuilt from the game results themselves (the standings endpoint can come back
+  // empty after a season ends). Conference/division membership comes from mid-season standings.
+  const y = Number(season.slice(0, 4));
+  const meta = (await getJSON(`${API}/standings/${y + 1}-03-01`)).standings;
+  return { schedules, all, finalStandings: finalTable(all, meta) };
+}
+
+function finalTable(all, meta) {
+  const t = {};
+  for (const r of meta) {
+    t[r.teamAbbrev.default] = { teamAbbrev: { default: r.teamAbbrev.default }, conferenceName: r.conferenceName, divisionName: r.divisionName, points: 0, regulationWins: 0, wins: 0, gamesPlayed: 0 };
+  }
+  for (const g of all) {
+    if (!FINAL.has(g.gameState) || g.homeTeam.score == null) continue;
+    const h = t[g.homeTeam.abbrev];
+    const a = t[g.awayTeam.abbrev];
+    if (!h || !a) continue;
+    const [w, l] = g.homeTeam.score > g.awayTeam.score ? [h, a] : [a, h];
+    const extra = (g.gameOutcome?.lastPeriodType ?? 'REG') !== 'REG';
+    w.points += 2;
+    w.wins += 1;
+    if (extra) l.points += 1;
+    else w.regulationWins += 1;
+    h.gamesPlayed += 1;
+    a.gamesPlayed += 1;
+  }
+  for (const r of Object.values(t)) r.pointPctg = r.gamesPlayed ? r.points / (2 * r.gamesPlayed) : 0.5;
+  return Object.values(t);
 }
 
 // Same playoff format as the simulator: top 3 per division + 2 wild cards, by points then regulation wins.
@@ -161,6 +185,7 @@ async function main() {
   const calib = [];
   const X = [];
   const y = [];
+  const checks = [];
   for (const season of SEASONS) {
     log(`Season ${season}: downloading schedules and standings`);
     const data = await seasonData(season);
@@ -168,6 +193,9 @@ async function main() {
     const d = debtRows(data);
     X.push(...d.X);
     y.push(...d.y);
+    const made = [...qualifiers(data.finalStandings)].sort();
+    checks.push({ season, games: d.y.length, playoffTeams: made });
+    if (made.length !== 16 || d.y.length < 1000) throw new Error(`Season ${season} looks incomplete: ${made.length} playoff teams, ${d.y.length} games`);
   }
 
   // best settings by Brier score (lower is better)
@@ -194,6 +222,14 @@ async function main() {
   const md = `# Backtest report
 
 Seasons: ${SEASONS.join(', ')}. Generated ${new Date().toISOString().slice(0, 10)}.
+
+## Data check
+
+Confirm these match reality before trusting anything below.
+
+| Season | Games used | Playoff teams (from final results) |
+|---|---|---|
+${checks.map((c) => `| ${c.season} | ${c.games.toLocaleString('en-CA')} | ${c.playoffTeams.join(', ')} |`).join('\n')}
 
 ## 1. Playoff odds
 
