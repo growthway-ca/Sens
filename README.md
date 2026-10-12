@@ -57,3 +57,7 @@ House = home game, plane = road game. Ribbon design: white = win, red = regulati
 Division records are Ottawa's record against that division; teams are listed in division standings order.
 
 Set `TEAM=TOR` (or any abbreviation) before `npm run build` to make one for another club.
+
+## Backtest (phase 3)
+
+Actions → "Backtest (phase 3)" → Run workflow. It re-simulates the last three seasons from Dec/Jan/Feb/Mar standings to check the playoff odds are well calibrated (and picks the best model settings), and runs a regression on every game to measure what back-to-backs, travel and time zones actually cost. Results land in `reports/backtest.md` in about 5 minutes.
