@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node build.mjs",
+    "build": "node build.mjs && node atlantic/build-atlantic.mjs",
     "post": "node post-to-reddit.mjs"
   },
   "dependencies": {

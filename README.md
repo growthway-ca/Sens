@@ -31,6 +31,22 @@ Open `dist/season-at-a-glance.png` (the image) or `dist/index.html` (the live pa
    - Optional variables: `FLAIR_ID` (if the sub requires flair), `POST_DAY` (default `Mon`; the page and image still refresh every day)
 3. Check with the r/OttawaSenators mods before turning on automated posts.
 
+## Atlantic: Schedule Debt
+
+`atlantic/` builds a second card at `/atlantic/` on your Netlify site: a fatigue score for every Atlantic team (back-to-backs, travel, time zones, rest mismatches), ranked by debt paid so far, with the full season charted. Tap the gold "Atlantic" plate to save the image.
+
+- Scoring weights live at the top of `atlantic/schedule-debt.mjs` (`WEIGHTS`) and are printed on the card.
+- Arena locations are in `atlantic/arenas.mjs`. Add neutral-site games (e.g. Global Series) to `NEUTRAL_VENUES`.
+- Run it on its own with `node atlantic/build-atlantic.mjs`.
+
+## Atlantic: Leverage Games
+
+Built in the same run, at `/atlantic/leverage.html`. It simulates the rest of the season 10,000 times from current standings to get playoff odds for every team, then measures each upcoming game's "swing": a team's playoff odds if it wins minus its odds if it doesn't. The card shows Atlantic odds (with week-over-week change), each team's biggest game in the next two weeks, and the eight biggest Atlantic games coming up.
+
+- Model settings (simulations, overtime rate, home ice, early-season regression) are in `SIM_SETTINGS` at the top of `atlantic/simulate.mjs`.
+- The simulation is seeded by date, so GitHub and Netlify produce identical numbers each day.
+- The GitHub run saves each day's odds to `data/odds-history.json`; the week-over-week column reads from it, so it fills in after the first week.
+
 ## Designs
 
 The default is the "season ribbon" design (`design-ribbon.mjs`). To build the original layout instead, run `DESIGN=classic npm run build`.

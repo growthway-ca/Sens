@@ -21,7 +21,7 @@ const FINAL_STATES = new Set(['OFF', 'FINAL']);
 const logoUrl = (abbr) => `https://assets.nhle.com/logos/nhl/svg/${abbr}_dark.svg`;
 
 // ---------- data ----------
-async function getJSON(url) {
+export async function getJSON(url) {
   const res = await fetch(url, { headers: { 'User-Agent': 'season-at-a-glance' } });
   if (!res.ok) throw new Error(`NHL API returned ${res.status} for ${url}`);
   return res.json();
@@ -235,7 +235,7 @@ export function buildModel({ schedule, standings, history = {}, leaders = null }
 }
 
 // ---------- formatting ----------
-export { TZ, logoUrl };
+export { TZ, logoUrl, FINAL_STATES };
 const fmt = (opts) => new Intl.DateTimeFormat('en-CA', { timeZone: TZ, ...opts });
 const headerDate = (d) =>
   fmt({ month: 'long', day: 'numeric', year: 'numeric' }).format(d).toUpperCase();
@@ -381,7 +381,7 @@ const FONTS = [
   ['Barlow Condensed', 600, '@fontsource/barlow-condensed/files/barlow-condensed-latin-600-normal.woff2'],
   ['Barlow Condensed', 700, '@fontsource/barlow-condensed/files/barlow-condensed-latin-700-normal.woff2'],
 ];
-async function fontFaceCSS() {
+export async function fontFaceCSS() {
   const faces = await Promise.all(
     FONTS.map(async ([family, weight, file]) => {
       try {
@@ -397,7 +397,7 @@ async function fontFaceCSS() {
 
 // Swap every NHL logo URL for an embedded copy, so the page works offline and
 // the in-browser "save image" can draw them (remote images would block it).
-async function inlineLogos(html) {
+export async function inlineLogos(html) {
   const urls = [...new Set(html.match(/https:\/\/assets\.nhle\.com\/[^"')\s]+\.(?:svg|png|jpg)/g) ?? [])];
   const swaps = await Promise.all(
     urls.map(async (url) => {
@@ -416,7 +416,7 @@ async function inlineLogos(html) {
   return html;
 }
 
-async function screenshot(htmlFile, pngFile) {
+export async function screenshot(htmlFile, pngFile) {
   const { chromium } = await import('playwright');
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1080, height: 1350 } });
