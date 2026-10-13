@@ -255,7 +255,7 @@ svg rect.w { fill: var(--w); } svg rect.l { fill: var(--l); } svg rect.otl { fil
 .ticket { display: grid; grid-template-columns: 86px 1fr; height: 66px; margin-bottom: 8px; background: var(--coal); border-radius: 6px; overflow: hidden; }
 .stub { background: var(--coal); display: grid; grid-template-columns: 24px 1fr; align-items: center; border: 2px solid var(--gold); border-right: 2px dashed var(--gold); border-radius: 6px 0 0 6px; }
 .wd { writing-mode: vertical-rl; transform: rotate(180deg); justify-self: center; font: 700 15px/1 var(--cond); letter-spacing: 1px; text-transform: uppercase; color: var(--gold); }
-.dn { justify-self: center; padding-right: 4px; font: 400 36px/1 var(--jersey); color: var(--red); }
+.dn { justify-self: center; padding-right: 4px; font: 400 36px/1 var(--jersey); color: var(--white); }
 .vs { display: flex; align-items: center; padding: 0 12px 0 10px; gap: 8px; }
 .where { width: 20px; font: 600 20px var(--cond); color: var(--mute); }
 .tlogo { width: 62px; height: 52px; object-fit: contain; }
