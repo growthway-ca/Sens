@@ -99,25 +99,32 @@ export function playoffGap(rows, team) {
   return rival ? me.points - rival.points : null;
 }
 
-// The two wild cards plus the chasers, for the table. Our team is appended if it sits further back.
-export function wildCardRace(rows, team, shown = 6) {
+// Our division's top three, then the two wild cards and the chasers, for the table.
+// Our team is appended if it sits further back in the wild card race.
+export function wildCardRace(rows, team, shown = 5) {
   const split = splitConference(rows, team);
   if (!split) return null;
   const { me, divisionTop, race } = split;
-  const row = (r, i) => ({
+  const row = (r, tag = '', cut = false) => ({
     abbr: r.teamAbbrev.default,
     logo: logoUrl(r.teamAbbrev.default),
     gp: r.gamesPlayed,
     pts: r.points,
-    tag: i < 2 ? `WC${i + 1}` : '',
+    tag,
     me: r === me,
-    cut: i === 1,
+    cut,
   });
+  const letter = (me.divisionName ?? '?').charAt(0);
+  const division = [...divisionTop]
+    .filter((r) => r.divisionName === me.divisionName)
+    .sort((a, b) => (a.divisionSequence ?? 99) - (b.divisionSequence ?? 99))
+    .map((r, i) => row(r, `${letter}${i + 1}`));
   const idx = race.indexOf(me);
   return {
-    rows: race.slice(0, shown).map(row),
-    extra: idx >= shown ? row(me, idx) : null,
-    divisionSpot: divisionTop.has(me) ? { rank: me.divisionSequence, division: me.divisionName } : null,
+    divisionName: me.divisionName,
+    division,
+    rows: race.slice(0, shown).map((r, i) => row(r, i < 2 ? `WC${i + 1}` : '', i === 1)),
+    extra: idx >= shown ? row(me) : null,
   };
 }
 

@@ -131,14 +131,12 @@ function wildCardTable(wc) {
   if (!wc) return '';
   const row = (r) => `<div class="wc-row${r.me ? ' me' : ''}${r.cut ? ' cut' : ''}">
       <span class="tag">${r.tag}</span>${img(r.logo, r.abbr, 'wlogo')}<span class="ab">${r.abbr}</span><span class="n">${r.gp}</span><span class="n pts">${r.pts}</span></div>`;
-  const note = wc.divisionSpot
-    ? `<p class="wc-note">Ottawa holds a division spot, ${ordinal(wc.divisionSpot.rank)} in the ${wc.divisionSpot.division}</p>`
-    : '';
-  return `<section class="wc"><h3>Wild card race</h3>
-    <div class="wc-row wc-head"><span></span><span></span><span></span><span class="n">GP</span><span class="n">PTS</span></div>
+  return `<section class="wc"><h3>Playoff picture</h3>
+    <div class="wc-row wc-head"><span class="grp">${wc.divisionName ?? ''}</span><span class="n">GP</span><span class="n">PTS</span></div>
+    ${wc.division.map(row).join('')}
+    <div class="wc-row wc-head wc-sub"><span class="grp">Wild card</span></div>
     ${wc.rows.map(row).join('')}
     ${wc.extra ? `<div class="wc-gap">…</div>${row(wc.extra)}` : ''}
-    ${note}
   </section>`;
 }
 
@@ -222,7 +220,7 @@ svg rect.w { fill: var(--w); } svg rect.l { fill: var(--l); } svg rect.otl { fil
 .pip { width: 23px; height: 23px; }
 .pip.w { fill: var(--w); } .pip.l { fill: var(--l); } .pip.otl { fill: var(--otl); } .pip.tbd { fill: var(--tbd); }
 
-.wc-row { display: grid; grid-template-columns: 40px 42px 1fr 40px 44px; align-items: center; height: 36px; padding: 0 6px; font: 600 21px var(--cond); }
+.wc-row { display: grid; grid-template-columns: 40px 42px 1fr 40px 44px; align-items: center; height: 34px; padding: 0 6px; font: 600 21px var(--cond); }
 .wc-head { height: 22px; font: 600 15px var(--cond); color: var(--mute); }
 .tag { font: 600 15px var(--cond); color: var(--gold); }
 .wlogo { width: 34px; height: 28px; object-fit: contain; }
@@ -232,7 +230,8 @@ svg rect.w { fill: var(--w); } svg rect.l { fill: var(--l); } svg rect.otl { fil
 .wc-row.cut { border-bottom: 2px dashed var(--gold); }
 .wc-row.me { background: rgba(200,16,46,.35); border-radius: 4px; }
 .wc-gap { text-align: center; color: var(--mute); line-height: 1; padding: 2px 0; }
-.wc-note { font: 500 17px/1.25 var(--cond); color: var(--mute); margin-top: 10px; }
+.wc-head .grp { font: 600 15px var(--cond); color: var(--mute); text-transform: uppercase; letter-spacing: 1px; grid-column: 1 / 4; }
+.wc-sub { margin-top: 6px; }
 .leaders { margin-top: 22px; }
 .leader { display: flex; align-items: center; gap: 12px; height: 74px; }
 .shot { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; background: #1d1d1d; border: 2px solid var(--red); flex: none; }
