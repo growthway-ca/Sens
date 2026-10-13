@@ -68,9 +68,19 @@ function playoffChart(m, total) {
   const pts = m.gapByGame
     .map((d, i) => (d == null ? null : [+(i * slot + slot / 2).toFixed(1), d]))
     .filter(Boolean);
-  const zero = `<line x1="0" x2="${W}" y1="${mid}" y2="${mid}" class="cut"/><text x="${W + 8}" y="${mid + 5}" class="gl gold">0</text>`;
+  // Scale is at least ±10 points so a small early cushion doesn't look like the ceiling;
+  // beyond that it grows in steps of 10 and is labelled at the half and full marks.
+  const top = Math.max(10, Math.ceil(Math.max(0, ...pts.map((p) => Math.abs(p[1]))) / 10) * 10);
+  const k = (mid - 10) / top;
+  const grid = [top, top / 2, -top / 2, -top]
+    .map((n) => {
+      const y = (mid - n * k).toFixed(1);
+      const label = `${n > 0 ? '+' : '−'}${Math.abs(n)}`;
+      return `<line x1="0" x2="${W}" y1="${y}" y2="${y}" class="grid"/><text x="${W + 8}" y="${+y + 5}" class="gl">${label}</text>`;
+    })
+    .join('');
+  const zero = `${grid}<line x1="0" x2="${W}" y1="${mid}" y2="${mid}" class="cut"/><text x="${W + 8}" y="${mid + 5}" class="gl gold">0</text>`;
   if (!pts.length) return `<svg viewBox="0 0 ${W + 36} ${H}" width="${W + 36}" height="${H}">${zero}</svg>`;
-  const k = (mid - 10) / Math.max(4, ...pts.map((p) => Math.abs(p[1])));
   const xy = pts.map(([x, d]) => `${x},${(mid - d * k).toFixed(1)}`);
   const area = `${pts[0][0]},${mid} ${xy.join(' ')} ${pts.at(-1)[0]},${mid}`;
   const [lx] = pts.at(-1);
