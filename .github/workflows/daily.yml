@@ -2,10 +2,10 @@ name: Season at a glance
 
 on:
   schedule:
-    # GitHub cron is UTC only, so schedule both 6am EDT (10:00 UTC) and
-    # 6am EST (11:00 UTC); the gate job below lets only the right one run.
-    - cron: "0 10 * * *"
-    - cron: "0 11 * * *"
+    # GitHub cron is UTC only, so schedule both 3:39am EDT (07:39 UTC) and
+    # 3:39am EST (08:39 UTC); the gate job below lets only the right one run.
+    - cron: "39 7 * * *"
+    - cron: "39 8 * * *"
   workflow_dispatch: # lets you run it by hand from the Actions tab
 
 permissions:
@@ -24,8 +24,8 @@ jobs:
           offset=$(TZ=America/Toronto date +%z) # -0400 in summer, -0500 in winter
           go=false
           if [ -z "$SCHEDULE" ]; then go=true; fi # manual run
-          if [ "$SCHEDULE" = "0 10 * * *" ] && [ "$offset" = "-0400" ]; then go=true; fi
-          if [ "$SCHEDULE" = "0 11 * * *" ] && [ "$offset" = "-0500" ]; then go=true; fi
+          if [ "$SCHEDULE" = "39 7 * * *" ] && [ "$offset" = "-0400" ]; then go=true; fi
+          if [ "$SCHEDULE" = "39 8 * * *" ] && [ "$offset" = "-0500" ]; then go=true; fi
           echo "go=$go" >> "$GITHUB_OUTPUT"
 
   build:

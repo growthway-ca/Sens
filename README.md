@@ -15,7 +15,7 @@ Open `dist/season-at-a-glance.png` (the image) or `dist/index.html` (the live pa
 ## Make it run every day on GitHub
 
 1. Create a new GitHub repo and upload this folder (keep the `.github` folder).
-2. The workflow runs daily at 6am Eastern. To test right away, go to Actions, pick "Season at a glance" and click "Run workflow".
+2. The workflow runs daily at 3:39am Eastern. To test right away, go to Actions, pick "Season at a glance" and click "Run workflow".
 3. Each run saves the PNG under that run's Artifacts so you can download it and post it yourself.
 
 ## Netlify (live page)
