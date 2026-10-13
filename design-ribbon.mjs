@@ -149,7 +149,7 @@ function leadersStrip(leaders) {
       .map(
         (p) => `<div class="leader">
         ${p.headshot ? `<img class="shot" src="${p.headshot}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('b'),{className:'shot ph',textContent:'${p.initials}'}))">` : `<b class="shot ph">${p.initials}</b>`}
-        <span class="who"><span class="nm">${p.name}</span><span class="lb">${p.label}, ${p.detail}</span></span>
+        <span class="who"><span class="cat">${p.label}</span><span class="nm">${p.name}</span><span class="lb">${p.detail}</span></span>
         <span class="val">${p.value}</span></div>`
       )
       .join('')}
@@ -234,10 +234,11 @@ svg rect.w { fill: var(--w); } svg rect.l { fill: var(--l); } svg rect.otl { fil
 .wc-gap { text-align: center; color: var(--mute); line-height: 1; padding: 2px 0; }
 .wc-note { font: 500 17px/1.25 var(--cond); color: var(--mute); margin-top: 10px; }
 .leaders { margin-top: 22px; }
-.leader { display: flex; align-items: center; gap: 12px; height: 70px; }
+.leader { display: flex; align-items: center; gap: 12px; height: 74px; }
 .shot { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; background: #1d1d1d; border: 2px solid var(--red); flex: none; }
 .shot.ph { display: grid; place-items: center; font: 400 18px var(--jersey); color: var(--white); }
 .who { display: grid; min-width: 0; }
+.cat { font: 700 14px/1.1 var(--cond); color: var(--gold); text-transform: uppercase; letter-spacing: 1px; }
 .nm { font: 700 22px/1.1 var(--cond); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lb { font: 500 16px/1.2 var(--cond); color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .val { margin-left: auto; font: 400 28px var(--jersey); }

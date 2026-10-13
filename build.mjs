@@ -132,21 +132,26 @@ export function teamLeaders(stats) {
     headshot: p.headshot,
     initials: `${(p.firstName?.default ?? '').charAt(0)}${(p.lastName?.default ?? '').charAt(0)}`,
   });
+  const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
   const out = [];
   const pts = top(skaters, 'points');
-  if (pts) out.push({ ...person(pts), label: 'Points', value: pts.points, detail: `${pts.goals} G, ${pts.assists} A` });
-  let second = top(skaters, 'goals');
-  if (second && pts && second.playerId === pts.playerId) {
-    second = top(skaters.filter((p) => p.playerId !== pts.playerId), 'goals');
+  if (pts) {
+    out.push({ ...person(pts), label: 'Points', value: pts.points, detail: `${plural(pts.goals, 'goal')}, ${plural(pts.assists, 'assist')}` });
   }
-  if (second) out.push({ ...person(second), label: 'Goals', value: second.goals, detail: `${second.points} points` });
+  // Shots leader is shown even when it's the points leader again: it's the real leader, not a fallback.
+  const sog = top(skaters, 'shots');
+  if (sog?.shots) {
+    const pct = sog.shootingPctg != null ? `, ${(sog.shootingPctg * 100).toFixed(1)}% shooting` : '';
+    out.push({ ...person(sog), label: 'Shots on goal', value: sog.shots, detail: `${plural(sog.goals, 'goal')}${pct}` });
+  }
   const g = top(goalies, 'gamesPlayed');
   if (g) {
+    const gaa = g.goalsAgainstAverage != null ? `, ${g.goalsAgainstAverage.toFixed(2)} GAA` : '';
     out.push({
       ...person(g),
-      label: 'Save %',
+      label: 'Save percentage',
       value: (g.savePercentage ?? 0).toFixed(3).replace(/^0/, ''),
-      detail: `${g.wins ?? 0} wins`,
+      detail: `${plural(g.wins ?? 0, 'win')}${gaa}`,
     });
   }
   return out;
