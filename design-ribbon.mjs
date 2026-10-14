@@ -1,6 +1,7 @@
 // "Season ribbon" design: the whole 82-game season as one strip, a playoff-pace line under it,
 // head-to-head by division, and the next five games as ticket stubs.
-import { TZ, logoUrl } from './build.mjs';
+import { TZ, logoUrl, HOME_TEAM } from './build.mjs';
+import { TEAMS, teamTheme } from './teams.mjs';
 
 const W = 948; // chart width, shared by the ribbon and the pace line so games line up vertically
 const fmt = (opts) => new Intl.DateTimeFormat('en-CA', { timeZone: TZ, ...opts });
@@ -164,7 +165,37 @@ function leadersStrip(leaders) {
   </section>`;
 }
 
+// Team switcher shown above the card (outside .canvas, so it never appears in the saved image).
+function picker(m) {
+  if (!m.picker?.length) return '';
+  const href = (t) => (t === HOME_TEAM ? '/' : `/team/${t}/`);
+  const options = m.picker
+    .map((t) => `<option value="${href(t)}"${t === m.team ? ' selected' : ''}>${TEAMS[t]?.name ?? t}</option>`)
+    .join('');
+  return `<nav class="pick">
+  <label for="team">Team</label>
+  <select id="team" data-team="${m.team}">${options}</select>
+  <a class="mine" hidden></a>
+</nav>
+<script>
+(() => {
+  const sel = document.getElementById('team');
+  const key = 'season-at-a-glance-team';
+  const store = (v) => { try { localStorage.setItem(key, v); } catch {} };
+  sel.addEventListener('change', () => { store(sel.value); location.href = sel.value; });
+  let saved = null;
+  try { saved = localStorage.getItem(key); } catch {}
+  const here = sel.options[sel.selectedIndex];
+  if (saved && saved !== here.value) {
+    const opt = [...sel.options].find((o) => o.value === saved);
+    if (opt) Object.assign(document.querySelector('.pick .mine'), { href: saved, textContent: 'Your team: ' + opt.textContent + ' →', hidden: false });
+  }
+})();
+</script>`;
+}
+
 export function renderRibbon(m, fontFaces = '') {
+  const theme = teamTheme(m.team);
   const played = m.games.filter((g) => g.done).length;
   const streak = m.streak?.length > 1 ? `, ${m.streak.won ? 'won' : 'lost'} ${m.streak.length} straight` : '';
   const standing = m.divisionRank ? `${ordinal(m.divisionRank)} in the ${m.divisionName}` : '';
@@ -176,6 +207,7 @@ ${fontFaces}
   --black: #000; --coal: #161616; --line: #2c2c2c; --mute: #8f8f8f;
   --red: #c8102e; --gold: #c2a26a; --white: #f4f4f4; --green: #2fbf3a;
   --w: var(--green); --l: var(--red); --otl: var(--gold); --tbd: #3a3a3a;
+  --team: ${theme.primary}; --team2: ${theme.secondary}; --hi: ${theme.hi}; --hi-soft: ${theme.hiSoft};
   --jersey: 'Graduate', 'Rockwell', serif;
   --cond: 'Barlow Condensed', 'Arial Narrow', sans-serif;
 }
@@ -185,8 +217,8 @@ body { background: #000; display: flex; flex-direction: column; align-items: cen
 
 /* compact header: crest on a slanted red plate, record as a jersey number */
 .head { position: relative; height: 112px; }
-.plate { position: absolute; left: -40px; top: 0; width: 250px; height: 112px; background: var(--red); transform: skewX(-14deg); }
-.plate::after { content: ""; position: absolute; right: -16px; top: 0; width: 7px; height: 100%; background: var(--gold); }
+.plate { position: absolute; left: -40px; top: 0; width: 250px; height: 112px; background: var(--team); transform: skewX(-14deg); }
+.plate::after { content: ""; position: absolute; right: -16px; top: 0; width: 7px; height: 100%; background: var(--team2); }
 .crest { position: absolute; left: 30px; top: 10px; width: 150px; height: 92px; object-fit: contain; filter: drop-shadow(0 4px 8px rgba(0,0,0,.35)); }
 .save { all: unset; position: absolute; left: 30px; top: 10px; width: 150px; height: 92px; display: block; cursor: pointer; z-index: 2; }
 .save .crest { position: static; width: 100%; height: 100%; }
@@ -238,13 +270,13 @@ svg rect.w { fill: var(--w); } svg rect.l { fill: var(--l); } svg rect.otl { fil
 .n { text-align: right; }
 .pts { font: 400 20px var(--jersey); }
 .wc-row.cut { border-bottom: 2px dashed var(--gold); }
-.wc-row.me { background: rgba(200,16,46,.35); border-radius: 4px; }
+.wc-row.me { background: var(--hi-soft); border-radius: 4px; }
 .wc-gap { text-align: center; color: var(--mute); line-height: 1; padding: 2px 0; }
 .wc-head .grp { font: 600 15px var(--cond); color: var(--mute); text-transform: uppercase; letter-spacing: 1px; grid-column: 1 / 4; }
 .wc-sub { margin-top: 6px; }
 .leaders { margin-top: 22px; }
 .leader { display: flex; align-items: center; gap: 12px; height: 74px; }
-.shot { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; background: #1d1d1d; border: 2px solid var(--red); flex: none; }
+.shot { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; background: #1d1d1d; border: 2px solid var(--hi); flex: none; }
 .shot.ph { display: grid; place-items: center; font: 400 18px var(--jersey); color: var(--white); }
 .who { display: grid; min-width: 0; }
 .cat { font: 700 14px/1.1 var(--cond); color: var(--gold); text-transform: uppercase; letter-spacing: 1px; }
@@ -271,8 +303,12 @@ svg rect.w { fill: var(--w); } svg rect.l { fill: var(--l); } svg rect.otl { fil
 .ot { font: 600 17px var(--cond); color: var(--gold); }
 .empty { font: 500 20px var(--cond); color: var(--mute); padding: 12px 0; }
 .legend { position: absolute; left: 48px; bottom: 18px; font: 500 17px var(--cond); color: var(--mute); display: flex; gap: 22px; align-items: center; }
+.pick { width: 1080px; display: flex; align-items: center; gap: 16px; padding: 18px 48px; font: 600 30px var(--cond); color: var(--mute); }
+.pick select { font: 700 32px var(--cond); color: var(--white); background: var(--coal); border: 2px solid var(--line); border-radius: 8px; padding: 8px 14px; }
+.pick .mine { margin-left: auto; color: var(--gold); text-decoration: none; }
 .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
 </style></head><body>
+${picker(m)}
 
 <main class="canvas">
   <header class="head">
@@ -319,7 +355,7 @@ document.querySelector('.save').addEventListener('click', async (e) => {
   try {
     const canvas = document.querySelector('.canvas');
     const blob = await htmlToImage.toBlob(canvas, { width: 1080, height: 1350, pixelRatio: 1 });
-    const name = 'sens-season-at-a-glance-${fmt({ year: 'numeric', month: '2-digit', day: '2-digit' }).format(m.now)}.png';
+    const name = '${theme.short.toLowerCase().replace(/[^a-z]+/g, '-')}-season-at-a-glance-${fmt({ year: 'numeric', month: '2-digit', day: '2-digit' }).format(m.now)}.png';
     const file = new File([blob], name, { type: 'image/png' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       await navigator.share({ files: [file] }); // phone: share sheet with "Save Image"

@@ -1,8 +1,10 @@
 // Season at a Glance — pulls live NHL data, writes dist/index.html, then screenshots it to dist/season-at-a-glance.png
-// Run: node build.mjs        (set TEAM=TOR etc. to make it for another club)
+// Run: node build.mjs        (set TEAM=TOR etc. to change the home page's club)
+// Also writes dist/team/XXX/ for every club, unless ALL_TEAMS=false.
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { TEAMS } from './teams.mjs';
 
 const TEAM = process.env.TEAM ?? 'OTT';
 const TZ = 'America/Toronto';
@@ -28,6 +30,8 @@ export async function getJSON(url) {
 }
 
 // Standings as they stood the morning after each game we've played, for the playoff-line history.
+// The cache is shared across teams so each day's league standings are fetched once per build.
+const standingsCache = new Map();
 async function standingsHistory(schedule) {
   const days = [
     ...new Set(
@@ -41,18 +45,19 @@ async function standingsHistory(schedule) {
   for (let i = 0; i < days.length; i += 6) {
     await Promise.all(
       days.slice(i, i + 6).map(async (d) => {
-        try {
-          out[d] = (await getJSON(`${API}/standings/${nextDay(d)}`)).standings;
-        } catch {
+        if (!standingsCache.has(d)) {
           // a missing day just leaves a gap in the line
+          standingsCache.set(d, getJSON(`${API}/standings/${nextDay(d)}`).then((r) => r.standings, () => null));
         }
+        const day = await standingsCache.get(d);
+        if (day) out[d] = day;
       })
     );
   }
   return out;
 }
 
-export async function loadData() {
+export async function loadData(team = TEAM, shared = {}) {
   if (process.env.FIXTURE_DIR) {
     const read = (f) => readFile(path.join(process.env.FIXTURE_DIR, f), 'utf8').then(JSON.parse);
     const standings = await read('standings.json');
@@ -62,10 +67,10 @@ export async function loadData() {
     return { schedule, standings, history, leaders };
   }
   const [schedule, standings] = await Promise.all([
-    getJSON(`${API}/club-schedule-season/${TEAM}/now`),
-    getJSON(`${API}/standings/now`),
+    getJSON(`${API}/club-schedule-season/${team}/now`),
+    shared.standings ?? getJSON(`${API}/standings/now`),
   ]);
-  const leaders = await getJSON(`${API}/club-stats/${TEAM}/now`).catch(() => null);
+  const leaders = await getJSON(`${API}/club-stats/${team}/now`).catch(() => null);
   return { schedule, standings, history: await standingsHistory(schedule), leaders };
 }
 
@@ -164,8 +169,8 @@ export function teamLeaders(stats) {
   return out;
 }
 
-function normaliseGame(g) {
-  const home = g.homeTeam.abbrev === TEAM;
+function normaliseGame(g, team) {
+  const home = g.homeTeam.abbrev === team;
   const us = home ? g.homeTeam : g.awayTeam;
   const them = home ? g.awayTeam : g.homeTeam;
   const done = FINAL_STATES.has(g.gameState);
@@ -191,10 +196,10 @@ function tally(games) {
   return `${r.W}-${r.L}-${r.OTL}`;
 }
 
-export function buildModel({ schedule, standings, history = {}, leaders = null }, now = new Date()) {
+export function buildModel({ schedule, standings, history = {}, leaders = null }, now = new Date(), team = TEAM) {
   const games = schedule.games
     .filter((g) => g.gameType === 2) // regular season only
-    .map((g) => ({ ...normaliseGame(g), gameDate: g.gameDate }))
+    .map((g) => ({ ...normaliseGame(g, team), gameDate: g.gameDate }))
     .sort((a, b) => a.start - b.start);
 
   const rows = standings?.standings ?? [];
@@ -204,7 +209,7 @@ export function buildModel({ schedule, standings, history = {}, leaders = null }
   const divisions = DIVISION_ORDER.map((name) => {
     const live = rows.filter((r) => r.divisionName === name).map((r) => r.teamAbbrev.default);
     const teams = (live.length ? live : DIVISIONS[name])
-      .filter((a) => a !== TEAM)
+      .filter((a) => a !== team)
       .sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
     const vs = (abbr) => games.filter((g) => g.opp === abbr);
     return {
@@ -214,11 +219,11 @@ export function buildModel({ schedule, standings, history = {}, leaders = null }
     };
   });
 
-  const me = byAbbr.get(TEAM);
+  const me = byAbbr.get(team);
   const played = games.filter((g) => g.done);
   const lastGame = played.at(-1);
 
-  const gapByGame = played.map((g) => (history[g.gameDate] ? playoffGap(history[g.gameDate], TEAM) : null));
+  const gapByGame = played.map((g) => (history[g.gameDate] ? playoffGap(history[g.gameDate], team) : null));
   const pts = played.reduce((p, g) => p + (g.result === 'W' ? 2 : g.result === 'OTL' ? 1 : 0), 0);
   let streak = 0;
   for (const g of [...played].reverse()) {
@@ -228,12 +233,12 @@ export function buildModel({ schedule, standings, history = {}, leaders = null }
 
   return {
     now,
-    team: TEAM,
+    team,
     games,
     points: me?.points ?? pts,
     gapByGame,
-    playoffGap: playoffGap(rows, TEAM),
-    wildCard: wildCardRace(rows, TEAM),
+    playoffGap: playoffGap(rows, team),
+    wildCard: wildCardRace(rows, team),
     leaders: teamLeaders(leaders),
     divisionName: me?.divisionName,
     divisionRank: me?.divisionSequence,
@@ -247,7 +252,7 @@ export function buildModel({ schedule, standings, history = {}, leaders = null }
 }
 
 // ---------- formatting ----------
-export { TZ, logoUrl, FINAL_STATES };
+export { TZ, logoUrl, FINAL_STATES, TEAM as HOME_TEAM };
 const fmt = (opts) => new Intl.DateTimeFormat('en-CA', { timeZone: TZ, ...opts });
 const headerDate = (d) =>
   fmt({ month: 'long', day: 'numeric', year: 'numeric' }).format(d).toUpperCase();
@@ -308,7 +313,7 @@ export function renderHTML(m, fontFaces = '') {
 <html lang="en"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=1080">
-<title>${TEAM} season at a glance — ${headerDate(m.now)}</title>
+<title>${m.team} season at a glance — ${headerDate(m.now)}</title>
 <style>
 ${fontFaces}
   :root {
@@ -323,7 +328,7 @@ ${fontFaces}
   .canvas { position: relative; width: 1080px; height: 1350px; overflow: hidden; background: var(--bg); color: #fff; font-family: var(--body); }
   .canvas::before { /* big faded crest behind everything */
     content: ""; position: absolute; inset: -8%;
-    background: url("${logoUrl(TEAM)}") 50% 58% / 115% no-repeat;
+    background: url("${logoUrl(m.team)}") 50% 58% / 115% no-repeat;
     opacity: .13; filter: blur(3px) saturate(1.4);
   }
   .canvas::after { /* faceted shards */
@@ -369,7 +374,7 @@ ${fontFaces}
 <main class="canvas">
   <div class="tag date">${headerDate(m.now)}</div>
   <div class="tag rec">${m.record}</div>
-  <img class="crest" src="${logoUrl(TEAM)}" alt="" onerror="this.remove()">
+  <img class="crest" src="${logoUrl(m.team)}" alt=""" onerror="this.remove()">
   <h1>SEASON AT A GLANCE</h1>
   <div class="board">
     ${divisionPanel(atl)}
@@ -409,23 +414,29 @@ export async function fontFaceCSS() {
 
 // Swap every NHL logo URL for an embedded copy, so the page works offline and
 // the in-browser "save image" can draw them (remote images would block it).
+const logoCache = new Map(); // url -> data URI (or null), shared across every page in a build
 export async function inlineLogos(html) {
   const urls = [...new Set(html.match(/https:\/\/assets\.nhle\.com\/[^"')\s]+\.(?:svg|png|jpg)/g) ?? [])];
   const swaps = await Promise.all(
     urls.map(async (url) => {
-      try {
-        const res = await fetch(url);
-        if (!res.ok) return null;
-        const b64 = Buffer.from(await res.arrayBuffer()).toString('base64');
-        const type = url.endsWith('.svg') ? 'image/svg+xml' : url.endsWith('.png') ? 'image/png' : 'image/jpeg';
-        return [url, `data:${type};base64,${b64}`];
-      } catch {
-        return null; // keep the remote URL if a logo can't be fetched
-      }
+      if (!logoCache.has(url)) logoCache.set(url, embed(url));
+      const uri = await logoCache.get(url);
+      return uri ? [url, uri] : null;
     })
   );
   for (const swap of swaps) if (swap) html = html.split(swap[0]).join(swap[1]);
   return html;
+}
+async function embed(url) {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const b64 = Buffer.from(await res.arrayBuffer()).toString('base64');
+    const type = url.endsWith('.svg') ? 'image/svg+xml' : url.endsWith('.png') ? 'image/png' : 'image/jpeg';
+    return `data:${type};base64,${b64}`;
+  } catch {
+    return null; // keep the remote URL if a logo can't be fetched
+  }
 }
 
 export async function screenshot(htmlFile, pngFile) {
@@ -439,24 +450,45 @@ export async function screenshot(htmlFile, pngFile) {
 }
 
 async function main() {
-  const model = buildModel(await loadData(), process.env.NOW ? new Date(process.env.NOW) : new Date());
-  await mkdir(OUT, { recursive: true });
-  const htmlFile = path.join(OUT, 'index.html');
-  const png = path.join(OUT, 'season-at-a-glance.png');
+  const now = process.env.NOW ? new Date(process.env.NOW) : new Date();
   const skipShot = process.env.SKIP_SCREENSHOT === 'true';
-
   const render = process.env.DESIGN === 'classic' ? renderHTML : (await import('./design-ribbon.mjs')).renderRibbon;
-  model.saveScript = await readFile('node_modules/html-to-image/dist/html-to-image.js', 'utf8').catch(() => '');
-  await writeFile(htmlFile, await inlineLogos(render(model, await fontFaceCSS())));
+  const fonts = await fontFaceCSS();
+  const saveScript = await readFile('node_modules/html-to-image/dist/html-to-image.js', 'utf8').catch(() => '');
+  const page = async (model, dir) => {
+    model.saveScript = saveScript;
+    model.picker = Object.keys(TEAMS).sort();
+    await mkdir(dir, { recursive: true });
+    const file = path.join(dir, 'index.html');
+    await writeFile(file, await inlineLogos(render(model, fonts)));
+    return file;
+  };
 
+  // Home page: the home club, plus the daily image and the details the Reddit post needs.
+  const data = await loadData();
+  const model = buildModel(data, now);
+  const htmlFile = await page(model, OUT);
   const title = `Season at a Glance — ${headerDate(model.now)} (${model.record})`;
   await writeFile(
     path.join(OUT, 'meta.json'),
     JSON.stringify({ title, record: model.record, playedRecently: model.playedRecently }, null, 2)
   );
-
-  if (!skipShot) await screenshot(htmlFile, png);
+  if (!skipShot) await screenshot(htmlFile, path.join(OUT, 'season-at-a-glance.png'));
   console.log(`Built ${OUT}/ — ${title}`);
+
+  // A page per club at /team/XXX/, sharing the league standings fetched above.
+  if (process.env.ALL_TEAMS === 'false' || process.env.FIXTURE_DIR) return;
+  let built = 0;
+  for (const team of Object.keys(TEAMS).sort()) {
+    try {
+      const teamData = team === TEAM ? data : await loadData(team, { standings: data.standings });
+      await page(buildModel(teamData, now, team), path.join(OUT, 'team', team));
+      built++;
+    } catch (err) {
+      console.error(`Skipped ${team}: ${err.message}`); // one club's bad data shouldn't sink the whole site
+    }
+  }
+  console.log(`Built ${built} team pages in ${OUT}/team/`);
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
