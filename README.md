@@ -22,6 +22,10 @@ Open `dist/season-at-a-glance.png` (the image) or `dist/index.html` (the live pa
 
 `netlify.toml` is included, so Netlify builds the page without a browser. Each morning the GitHub workflow saves the new image to `latest/` and pushes it, which triggers Netlify to redeploy. That keeps the page fresh with no build hook. To save the image from the page, tap the Sens logo: on a phone you get the share sheet (choose Save Image), on a computer it downloads.
 
+## Team pages
+
+Every club gets its own page at `/team/XXX/` (e.g. `/team/TOR/`), built in the same run with that team's colours, data and local game times. The home page stays Ottawa. A "Team" menu above the card switches clubs and remembers the visitor's pick. Colours and time zones live in `teams.mjs`. Set `ALL_TEAMS=false` to build only the home page.
+
 ## Turn on auto-posting (optional)
 
 1. Make a "script" app at https://www.reddit.com/prefs/apps. Reddit reviews new API apps, so this may need approval first.
