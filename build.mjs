@@ -167,7 +167,7 @@ export function teamLeaders(stats, teamGames = 0) {
       ...person(g),
       label: 'Save percentage',
       value: (g.savePercentage ?? 0).toFixed(3).replace(/^0/, ''),
-      detail: `${plural(g.gamesPlayed ?? 0, 'game')}, ${plural(g.wins ?? 0, 'win')}${gaa}`,
+      detail: `${plural(g.gamesPlayed ?? 0, 'game')}${gaa}`,
     });
   }
   return out;
