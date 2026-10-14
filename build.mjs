@@ -133,8 +133,8 @@ export function wildCardRace(rows, team, shown = 5) {
   };
 }
 
-// Points leader, goals leader (assists if it's the same player) and the No. 1 goalie.
-export function teamLeaders(stats) {
+// Points leader, shots leader and save-percentage leader.
+export function teamLeaders(stats, teamGames = 0) {
   if (!stats) return [];
   const skaters = stats.skaters ?? [];
   const goalies = stats.goalies ?? [];
@@ -156,14 +156,18 @@ export function teamLeaders(stats) {
     const pct = sog.shootingPctg != null ? `, ${(sog.shootingPctg * 100).toFixed(1)}% shooting` : '';
     out.push({ ...person(sog), label: 'Shots on goal', value: sog.shots, detail: `${plural(sog.goals, 'goal')}${pct}` });
   }
-  const g = top(goalies, 'gamesPlayed');
+  // Best save percentage among goalies who've played at least a quarter of the team's games,
+  // so one good relief appearance can't top the list. Falls back to the busiest goalie.
+  const minGames = Math.max(1, Math.ceil(teamGames / 4));
+  const qualified = goalies.filter((p) => (p.gamesPlayed ?? 0) >= minGames && p.savePercentage != null);
+  const g = qualified.length ? top(qualified, 'savePercentage') : top(goalies, 'gamesPlayed');
   if (g) {
     const gaa = g.goalsAgainstAverage != null ? `, ${g.goalsAgainstAverage.toFixed(2)} GAA` : '';
     out.push({
       ...person(g),
       label: 'Save percentage',
       value: (g.savePercentage ?? 0).toFixed(3).replace(/^0/, ''),
-      detail: `${plural(g.wins ?? 0, 'win')}${gaa}`,
+      detail: `${plural(g.gamesPlayed ?? 0, 'game')}, ${plural(g.wins ?? 0, 'win')}${gaa}`,
     });
   }
   return out;
@@ -239,7 +243,7 @@ export function buildModel({ schedule, standings, history = {}, leaders = null }
     gapByGame,
     playoffGap: playoffGap(rows, team),
     wildCard: wildCardRace(rows, team),
-    leaders: teamLeaders(leaders),
+    leaders: teamLeaders(leaders, played.length),
     divisionName: me?.divisionName,
     divisionRank: me?.divisionSequence,
     streak: played.length ? { won: played.at(-1).result === 'W', length: streak } : null,
