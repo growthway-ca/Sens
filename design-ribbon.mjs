@@ -4,7 +4,9 @@ import { TZ, logoUrl, HOME_TEAM } from './build.mjs';
 import { TEAMS, teamTheme } from './teams.mjs';
 
 const W = 948; // chart width, shared by the ribbon and the pace line so games line up vertically
-const fmt = (opts) => new Intl.DateTimeFormat('en-CA', { timeZone: TZ, ...opts });
+// Dates and times use the club's home time zone; set at the start of each render.
+let zone = TZ;
+const fmt = (opts) => new Intl.DateTimeFormat('en-CA', { timeZone: zone, ...opts });
 const longDate = (d) => fmt({ weekday: 'long', month: 'long', day: 'numeric' }).format(d);
 const dayNum = (d) => fmt({ day: 'numeric' }).format(d);
 const mon = (d) => fmt({ month: 'short' }).format(d).replace('.', '');
@@ -48,14 +50,15 @@ function ribbon(games) {
       return g.home ? `<circle cx="${cx}" cy="200" r="3" class="dot"/>` : `<circle cx="${cx}" cy="200" r="2.5" class="ring"/>`;
     })
     .join('');
-  let lastMonth = '';
-  const months = games
-    .map((g, i) => {
-      const m = mon(g.start);
-      if (m === lastMonth) return '';
-      lastMonth = m;
-      return `<text x="${(i * slot).toFixed(1)}" y="226" class="month">${m}</text>`;
-    })
+  const marks = [];
+  for (const [i, g] of games.entries()) {
+    const m = mon(g.start);
+    if (m !== marks.at(-1)?.m) marks.push({ m, x: i * slot });
+  }
+  // A month with only a game or two (e.g. a late-September opener) would collide with the next label.
+  const months = marks
+    .filter((k, i) => !marks[i + 1] || marks[i + 1].x - k.x >= 44)
+    .map((k) => `<text x="${k.x.toFixed(1)}" y="226" class="month">${k.m}</text>`)
     .join('');
   const axis = `<line x1="0" x2="${W}" y1="${MID}" y2="${MID}" class="axis"/>`;
   return `<svg viewBox="0 0 ${W + 36} 232" width="${W + 36}" height="232">${grid}${axis}${bars}${dots}${months}</svg>`;
@@ -196,6 +199,7 @@ function picker(m) {
 
 export function renderRibbon(m, fontFaces = '') {
   const theme = teamTheme(m.team);
+  zone = theme.tz;
   const played = m.games.filter((g) => g.done).length;
   const streak = m.streak?.length > 1 ? `, ${m.streak.won ? 'won' : 'lost'} ${m.streak.length} straight` : '';
   const standing = m.divisionRank ? `${ordinal(m.divisionRank)} in the ${m.divisionName}` : '';
