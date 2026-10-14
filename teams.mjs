@@ -52,9 +52,19 @@ function bright(h) {
   return toHex(rgb);
 }
 
+const ZONE_NAMES = {
+  'America/Toronto': 'Eastern',
+  'America/Chicago': 'Central',
+  'America/Winnipeg': 'Central',
+  'America/Edmonton': 'Mountain',
+  'America/Denver': 'Mountain',
+  'America/Los_Angeles': 'Pacific',
+  'America/Vancouver': 'Pacific',
+};
+
 export function teamTheme(abbr) {
   const t = TEAMS[abbr] ?? { name: abbr, short: abbr, primary: '#C8102E', secondary: '#C2A26A', tz: 'America/Toronto' };
   const hi = abbr === 'OTT' ? t.primary : bright(t.primary);
   const [r, g, b] = hex(hi);
-  return { ...t, abbr, hi, hiSoft: `rgba(${r},${g},${b},.38)` };
+  return { ...t, abbr, hi, hiSoft: `rgba(${r},${g},${b},.38)`, zoneName: `${ZONE_NAMES[t.tz] ?? 'Eastern'} time` };
 }

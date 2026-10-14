@@ -255,6 +255,8 @@ svg rect.w { fill: var(--w); } svg rect.l { fill: var(--l); } svg rect.otl { fil
 /* bottom: compact head-to-head | wild card + leaders | next 5 + last 5 */
 .lower { position: absolute; left: 48px; top: 568px; width: 984px; display: grid; grid-template-columns: 400px 268px 268px; column-gap: 24px; }
 .lower h3 { font: 700 25px var(--cond); padding-bottom: 6px; margin-bottom: 8px; border-bottom: 2px solid var(--line); }
+.lower h3.split { display: flex; justify-content: space-between; align-items: baseline; }
+.lower h3.split small { font: 600 15px var(--cond); color: var(--mute); text-transform: uppercase; letter-spacing: 1px; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 20px; align-content: start; }
 .div h3 { display: flex; justify-content: space-between; align-items: baseline; font-size: 21px; }
 .drec { font: 400 17px var(--jersey); color: var(--gold); }
@@ -336,7 +338,7 @@ ${picker(m)}
     <div class="grid2">${m.divisions.map(division).join('')}</div>
     <div class="mid">${wildCardTable(m.wildCard)}${leadersStrip(m.leaders)}</div>
     <div class="side">
-      <h3>Next 5</h3>
+      <h3 class="split">Next 5<small>${theme.zoneName}</small></h3>
       ${tickets(m.next)}
       <div class="results"><h3>Last 5</h3>${results(m.last)}</div>
     </div>
